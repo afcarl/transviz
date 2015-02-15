@@ -5,8 +5,10 @@ from collections import defaultdict
 
 from util import rgb2hexa, permute_by_usage, num_args, get_agraph_pngstr
 
+# TODO handle kwargs in layout
+
 # default graphviz attributes
-graphdefaults = dict(dpi='300',outputorder='edgesfirst')
+graphdefaults = dict(dpi='72',outputorder='edgesfirst',start=0)
 nodedefaults = dict(shape='circle',fillcolor='white',style='filled')
 edgedefaults = {}
 
@@ -103,7 +105,6 @@ class TransGraph(nx.DiGraph):
         return self
 
     def layout(self,algname,**kwargs):
-        # TODO handle kwargs
         if algname in graphviz_layouts:
             self.graph['graph'].update(graphviz_layouts[algname])
             posdict = nx.graphviz_layout(self,algname)
@@ -124,18 +125,22 @@ class TransGraph(nx.DiGraph):
 
         return self
 
-    def draw(self,matplotlib=True,notebook=False):
+    def draw(self,outfile=None,matplotlib=True,notebook=False):
         agraph = nx.to_agraph(self)
         agraph.has_layout = self.has_layout
-        pngstr = get_agraph_pngstr(agraph)
 
-        if matplotlib:
-            import matplotlib.pyplot as plt
-            import matplotlib.image as mpimg
-            plt.imshow(mpimg.imread(pngstr),aspect='equal')
-            plt.axis('off')
+        if outfile is None:
+            pngstr = get_agraph_pngstr(agraph)
 
-        if notebook:
-            from IPython.display import Image, display
-            display(Image(data=pngstr))
+            if matplotlib:
+                import matplotlib.pyplot as plt
+                import matplotlib.image as mpimg
+                plt.imshow(mpimg.imread(pngstr),aspect='equal')
+                plt.axis('off')
+
+            if notebook:
+                from IPython.display import Image, display
+                display(Image(data=pngstr))
+        else:
+            agraph.draw(outfile)
 
