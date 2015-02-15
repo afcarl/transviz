@@ -1,5 +1,6 @@
 from __future__ import division
 import numpy as np
+import matplotlib.pyplot as plt
 
 import transviz as tv
 
@@ -15,8 +16,9 @@ g = tv.TransGraph(f['tmt_transmat'],nmax=20)
 g.edge_attrs(
     lambda i,j,v: {
         'color':cmap(v),
-        'penwidth':1+3*v})\
+        'penwidth':1+4*v})\
  .layout('circo').draw()
 
 # dot, circo, circular, neato, sfdp, fruchterman_reingold, spring
 
+plt.show()

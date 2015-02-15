@@ -5,6 +5,12 @@ from collections import defaultdict
 
 from util import rgb2hexa, permute_by_usage, num_args, get_agraph_pngstr
 
+# default graphviz attributes
+graphdefaults = dict(dpi='300',outputorder='edgesfirst')
+nodedefaults = dict(shape='circle',fillcolor='white',style='filled')
+edgedefaults = {}
+
+# default arguments to graphviz layout routines
 graphviz_layouts = {
     'twopi':{},
     'gvcolor':{},
@@ -22,6 +28,7 @@ graphviz_layouts = {
     'sfdp':{},
 }
 
+# default arguments to networkx layout routines
 networkx_layouts = {
     'circular':{},
     'shell':{},
@@ -30,6 +37,8 @@ networkx_layouts = {
     'fruchterman_reingold':{},
 }
 
+
+# converters from my formats to graphviz formats
 converters = defaultdict(lambda: str, {
     'pos':lambda xy: '%f,%f!' % xy,
     'color':lambda rgba: rgb2hexa(rgba),
@@ -37,7 +46,10 @@ converters = defaultdict(lambda: str, {
 
 
 def convert(dct):
-    return {attr:converters[attr](val) for attr, val in dct.items()}
+    try:
+        return {attr:converters[attr](val) for attr, val in dct.items()}
+    except:
+        return dct
 
 
 class TransGraph(nx.DiGraph):
@@ -54,8 +66,9 @@ class TransGraph(nx.DiGraph):
         super(TransGraph,self).__init__(A)
 
         # set defaults
-        self.graph['graph'] = dict(dpi='300',outputorder='edgesfirst')
-        self.graph['node'] = dict(shape='circle',fillcolor='white',style='filled')
+        self.graph['graph'] = graphdefaults
+        self.graph['node'] = nodedefaults
+        self.graph['edge'] = edgedefaults
 
     def graph_attrs(self,dct):
         self.graph.update(convert(dct))
@@ -112,20 +125,17 @@ class TransGraph(nx.DiGraph):
         return self
 
     def draw(self,matplotlib=True,notebook=False):
-        agraph = self._to_agraph()
-        self._pngstr = get_agraph_pngstr(agraph)
+        agraph = nx.to_agraph(self)
+        agraph.has_layout = self.has_layout
+        pngstr = get_agraph_pngstr(agraph)
 
         if matplotlib:
             import matplotlib.pyplot as plt
             import matplotlib.image as mpimg
-            plt.imshow(mpimg.imread(self._pngstr),aspect='equal')
+            plt.imshow(mpimg.imread(pngstr),aspect='equal')
             plt.axis('off')
 
         if notebook:
             from IPython.display import Image, display
-            display(Image(data=self._pngstr))
+            display(Image(data=pngstr))
 
-    def _to_agraph(self):
-        agraph = nx.to_agraph(self)
-        agraph.has_layout = self.has_layout
-        return agraph
