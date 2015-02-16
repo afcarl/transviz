@@ -8,9 +8,20 @@ from util import rgb2hexa, permute_by_usage, num_args, get_agraph_pngstr
 # TODO handle kwargs in layout
 
 # default graphviz attributes
-graphdefaults = dict(dpi='72',outputorder='edgesfirst',start=0)
-nodedefaults = dict(shape='circle',fillcolor='white',style='filled')
-edgedefaults = {}
+graphdefaults = dict(
+    dpi='72',
+    outputorder='edgesfirst',
+    start=0,
+)
+
+nodedefaults = dict(
+    shape='circle',
+    fillcolor='white',
+    style='filled',
+    fixedsize='true',
+)
+
+edgedefaults = dict()
 
 # default arguments to graphviz layout routines
 graphviz_layouts = {
@@ -32,11 +43,11 @@ graphviz_layouts = {
 
 # default arguments to networkx layout routines
 networkx_layouts = {
-    'circular':{},
-    'shell':{},
-    'spring':{},
-    'spectral':{},
-    'fruchterman_reingold':{},
+    'circular':{'scale':120},
+    'shell':{'scale':120},
+    'spring':{'scale':120},
+    'spectral':{'scale':250},
+    'fruchterman_reingold':{'scale':120},
 }
 
 
@@ -44,6 +55,7 @@ networkx_layouts = {
 converters = defaultdict(lambda: str, {
     'pos':lambda xy: '%f,%f!' % xy,
     'color':lambda rgba: rgb2hexa(rgba),
+    'weight':lambda x: x,
 })
 
 
@@ -72,8 +84,8 @@ class TransGraph(nx.DiGraph):
         self.graph['node'] = nodedefaults
         self.graph['edge'] = edgedefaults
 
-    def graph_attrs(self,dct):
-        self.graph.update(convert(dct))
+    def graph_attrs(self,**kwargs):
+        self.graph['graph'].update(convert(kwargs))
         return self
 
     def node_attrs(self,func):
@@ -104,14 +116,15 @@ class TransGraph(nx.DiGraph):
 
         return self
 
-    def layout(self,algname,**kwargs):
+    def layout(self,algname):
         if algname in graphviz_layouts:
             self.graph['graph'].update(graphviz_layouts[algname])
             posdict = nx.graphviz_layout(self,algname)
         elif algname in networkx_layouts:
             func = nx.__dict__[algname+'_layout']
-            posdict = func(self,scale=120*np.sqrt(self.order()),
-                           **networkx_layouts[algname])
+            kwargs = networkx_layouts[algname]
+            kwargs['scale'] *= np.sqrt(self.order())
+            posdict = func(self,**kwargs)
         else:
             raise ValueError(
                 'algname must be one of %s' %
