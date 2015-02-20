@@ -1,14 +1,14 @@
 from __future__ import division
 import numpy as np
-import matplotlib.pyplot as plt
 from matplotlib.colors import LinearSegmentedColormap
 
 import transviz as tv
 
 np.random.seed(0)
-algs = ['dot','circo','circular','neato','sfdp','fruchterman_reingold',
-        'spring','spectral']
-nmax = 40
+# algs = ['dot','circo','circular','neato','sfdp','fruchterman_reingold',
+#         'spring','spectral']
+algs = ['circo','fruchterman_reingold','spectral']
+nmax = 20
 
 A = np.load('trans-mats-for-matts.npz')['tmt_transmat']
 

@@ -6,8 +6,11 @@ from collections import defaultdict
 from util import rgb2hexa, permute_by_usage, num_args, get_agraph_pngstr
 
 # TODO handle kwargs in layout
+# TODO figure out how to do diffs
+# TODO add highlighting alex style
 
 # default graphviz attributes
+
 graphdefaults = dict(
     dpi='72',
     outputorder='edgesfirst',
@@ -24,6 +27,7 @@ nodedefaults = dict(
 edgedefaults = dict()
 
 # default arguments to graphviz layout routines
+
 graphviz_layouts = {
     'twopi':{},
     'gvcolor':{},
@@ -42,6 +46,7 @@ graphviz_layouts = {
 }
 
 # default arguments to networkx layout routines
+
 networkx_layouts = {
     'circular':{'scale':120},
     'shell':{'scale':120},
@@ -51,18 +56,23 @@ networkx_layouts = {
 }
 
 
-# converters from my formats to graphviz formats
-converters = defaultdict(lambda: str, {
-    'pos':lambda xy: '%f,%f!' % xy,
-    'color':lambda rgba: rgb2hexa(rgba),
-    'weight':lambda x: x,
-})
+# converters from my attribute formats to graphviz formats
+
+converters = defaultdict(
+    lambda: str,
+    {
+        'pos': lambda xy: '%f,%f!' % xy,
+        'color': lambda rgba: rgb2hexa(rgba),
+        'weight': lambda x: x,
+    }
+)
 
 
 def convert(dct):
     try:
         return {attr:converters[attr](val) for attr, val in dct.items()}
     except:
+        import ipdb; ipdb.set_trace();
         return dct
 
 
@@ -116,13 +126,13 @@ class TransGraph(nx.DiGraph):
 
         return self
 
-    def layout(self,algname):
+    def layout(self,algname,**kwargs):
         if algname in graphviz_layouts:
-            self.graph['graph'].update(graphviz_layouts[algname])
+            self.graph['graph'].update(dict(graphviz_layouts[algname],**kwargs))
             posdict = nx.graphviz_layout(self,algname)
         elif algname in networkx_layouts:
             func = nx.__dict__[algname+'_layout']
-            kwargs = networkx_layouts[algname]
+            kwargs = dict(networkx_layouts[algname],**kwargs)
             kwargs['scale'] *= np.sqrt(self.order())
             posdict = func(self,**kwargs)
         else:
