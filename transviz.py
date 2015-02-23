@@ -3,13 +3,15 @@ import numpy as np
 import networkx as nx
 from collections import defaultdict
 
-from util import rgb2hexa, permute_by_usage, num_args, get_agraph_pngstr
+from util import rgb2hexa, permute_by_usage, permute_matrix, \
+    pad_zeros, num_args, get_agraph_pngstr, get_usages
 
-# TODO handle kwargs in layout
-# TODO figure out how to do diffs
-# TODO add highlighting alex style
+# TODO add highlighting of nodes/neighborhoods
+# TODO add igraph kk layout
+# TODO circo bend through middle?
 
 # default graphviz attributes
+
 
 graphdefaults = dict(
     dpi='72',
@@ -78,10 +80,11 @@ def convert(dct):
 
 class TransGraph(nx.DiGraph):
     def __init__(self,A,relabel='usage',normalize=True,nmax=None):
-        # preprocess A
+        # preprocess the trans matrix/matrices
         if relabel == 'usage':
-            A = permute_by_usage(A)
+            A, self.perm = permute_by_usage(A,return_perm=True)
         A = A[:nmax,:nmax]
+        self.usages = get_usages(A)
         if normalize:
             A = A / A.max()
         self.A = A
@@ -104,8 +107,11 @@ class TransGraph(nx.DiGraph):
         if nargs == 1:
             for i, node in self.nodes_iter(data=True):
                 node.update(convert(func(i)))
+        elif nargs == 2:
+            for i, node in self.nodes_iter(data=True):
+                node.update(convert(func(i,self.usages[i])))
         else:
-            raise ValueError('func must take 1 argument')
+            raise ValueError('func must take 1 or 2 arguments')
 
         return self
 
@@ -158,6 +164,7 @@ class TransGraph(nx.DiGraph):
             if matplotlib:
                 import matplotlib.pyplot as plt
                 import matplotlib.image as mpimg
+                plt.figure()
                 plt.imshow(mpimg.imread(pngstr),aspect='equal')
                 plt.axis('off')
 
@@ -166,4 +173,45 @@ class TransGraph(nx.DiGraph):
                 display(Image(data=pngstr))
         else:
             agraph.draw(outfile)
+
+
+class TransDiff(TransGraph):
+    def __init__(self,(A,B),relabel='usage',normalize=True,nmax=None):
+        B = pad_zeros(B,A.shape)
+        super(TransDiff,self).__init__(A,relabel=relabel,normalize=normalize,nmax=nmax)
+        self.B = permute_matrix(B,self.perm)[:nmax,:nmax]
+        self.B_usages = get_usages(self.B)
+        if normalize:
+            self.B /= self.B.max()
+
+    def edge_attrs(self,func):
+        nargs = num_args(func)
+
+        if nargs == 1:
+            for i, j, edge in self.edges_iter(data=True):
+                edge.update(convert(func((i,j))))
+        elif nargs == 2:
+            for i, j, edge in self.edges_iter(data=True):
+                edge.update(convert(func(i,j)))
+        elif nargs == 4:
+            for i, j, edge in self.edges_iter(data=True):
+                edge.update(convert(func(i,j,self.A[i,j],self.B[i,j])))
+        else:
+            raise ValueError('func must take 1, 2, or 4 arguments')
+
+        return self
+
+    def node_attrs(self,func):
+        nargs = num_args(func)
+
+        if nargs == 1:
+            for i, node in self.nodes_iter(data=True):
+                node.update(convert(func(i)))
+        elif nargs == 3:
+            for i, node in self.nodes_iter(data=True):
+                node.update(convert(func(i,self.usages[i],self.B_usages[i])))
+        else:
+            raise ValueError('func must take 1 or 3 arguments')
+
+        return self
 
