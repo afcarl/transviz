@@ -2,9 +2,12 @@ from __future__ import division
 import numpy as np
 import networkx as nx
 from collections import defaultdict
+import hashlib
+import os
+import cPickle as pickle
 
-from util import rgb2hexa, permute_by_usage, num_args, \
-    get_agraph_pngstr, get_usages, normalize_transmat
+from util import rgb2hexa, num_args, get_agraph_pngstr, \
+        get_usages, normalize_transmat
 
 # TODO take count matrices?
 
@@ -133,19 +136,33 @@ class TransGraph(nx.DiGraph):
 
         return self
 
+    @staticmethod
+    def get_cachename(algname,weights):
+        return algname + hashlib.sha1(np.array(weights)).hexdigest()[:6]
+
     def layout(self,algname,**kwargs):
-        if algname in graphviz_layouts:
-            self.graph['graph'].update(dict(graphviz_layouts[algname],**kwargs))
-            posdict = nx.graphviz_layout(self,algname)
-        elif algname in networkx_layouts:
-            func = nx.__dict__[algname+'_layout']
-            kwargs = dict(networkx_layouts[algname],**kwargs)
-            kwargs['scale'] *= np.sqrt(self.order())
-            posdict = func(self,**kwargs)
+        cachename = self.get_cachename(
+            algname, [self.edge[i][j]['weight'] for (i,j) in self.edges()])
+
+        if os.path.isfile(cachename):
+            with open(cachename,'r') as infile:
+                posdict = pickle.load(infile)
         else:
-            raise ValueError(
-                'algname must be one of %s' %
-                (graphviz_layouts.keys() + networkx_layouts.keys()))
+            if algname in graphviz_layouts:
+                self.graph['graph'].update(dict(graphviz_layouts[algname],**kwargs))
+                posdict = nx.graphviz_layout(self,algname)
+            elif algname in networkx_layouts:
+                func = nx.__dict__[algname+'_layout']
+                kwargs = dict(networkx_layouts[algname],**kwargs)
+                kwargs['scale'] *= np.sqrt(self.order())
+                posdict = func(self,**kwargs)
+            else:
+                raise ValueError(
+                    'algname must be one of %s' %
+                    (graphviz_layouts.keys() + networkx_layouts.keys()))
+
+            with open(cachename,'w') as outfile:
+                pickle.dump(posdict,outfile,protocol=-1)
 
         nx.set_node_attributes(
             self,'pos',
@@ -165,7 +182,6 @@ class TransGraph(nx.DiGraph):
             if matplotlib:
                 import matplotlib.pyplot as plt
                 import matplotlib.image as mpimg
-                plt.figure()
                 plt.imshow(mpimg.imread(pngstr),aspect='equal')
                 plt.axis('off')
 
