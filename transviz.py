@@ -3,8 +3,8 @@ import numpy as np
 import networkx as nx
 from collections import defaultdict
 
-from util import rgb2hexa, permute_by_usage, permute_matrix, \
-    pad_zeros, num_args, get_agraph_pngstr, get_usages
+from util import rgb2hexa, permute_by_usage, num_args, \
+    get_agraph_pngstr, get_usages, normalize_transmat
 
 # TODO take count matrices?
 
@@ -79,15 +79,16 @@ def convert(dct):
 
 
 class TransGraph(nx.DiGraph):
-    def __init__(self,A,relabel=None,normalize=True,nmax=None):
-        # preprocess the trans matrix/matrices
-        if relabel == 'usage':
-            A, self.perm = permute_by_usage(A,return_perm=True)
-        A = A[:nmax,:nmax]
-        self.usages = get_usages(A)
-        if normalize:
-            A = A / A.max()
+    def __init__(self,A,norm=None):
         self.A = A
+        self.usages = get_usages(A)
+
+        if norm == 'row':
+            self.A = normalize_transmat(A)
+        elif norm == 'max':
+            self.A = self.A / self.A.max()
+        else:
+            assert norm is None
 
         # initialize as a nx.DiGraph
         super(TransGraph,self).__init__(A)
@@ -176,8 +177,33 @@ class TransGraph(nx.DiGraph):
 
 
 class TransDiff(TransGraph):
-    def __init__(self,(A,B),normalize=True,nmax=None):
-        raise NotImplementedError  # TODO
+    def __init__(self,(A,B),norm=None):
+        self.A = A
+        self.B = B
+
+        self.A_usages = get_usages(A)
+        self.B_usages = get_usages(B)
+
+        if norm == 'row':
+            self.A = normalize_transmat(A)
+            self.B = normalize_transmat(B)
+        elif norm == 'max':
+            self.A = self.A / self.A.max()
+            self.B = self.B / self.B.max()
+        elif norm == 'difference':
+            val = np.abs(self.B - self.A).max()
+            self.A = self.A / val
+            self.B = self.B / val
+        else:
+            assert norm is None
+
+        # initialize as a nx.DiGraph
+        super(TransGraph,self).__init__(A)
+
+        # set defaults
+        self.graph['graph'] = graphdefaults
+        self.graph['node'] = nodedefaults
+        self.graph['edge'] = edgedefaults
 
     def edge_attrs(self,func):
         nargs = num_args(func)
@@ -204,7 +230,7 @@ class TransDiff(TransGraph):
                 node.update(convert(func(i)))
         elif nargs == 3:
             for i, node in self.nodes_iter(data=True):
-                node.update(convert(func(i,self.usages[i],self.B_usages[i])))
+                node.update(convert(func(i,self.A_usages[i],self.B_usages[i])))
         else:
             raise ValueError('func must take 1 or 3 arguments')
 

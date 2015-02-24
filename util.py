@@ -126,6 +126,11 @@ def get_transmats(labelss, N):
 ##############
 
 
+def normalize_transmat(A):
+    norm = A.sum(1)
+    return A / np.where(norm,norm,1.)[:,None]
+
+
 def pad_zeros(mat,shape):
     out = np.zeros(shape,dtype=mat.dtype)
     m, n = mat.shape
