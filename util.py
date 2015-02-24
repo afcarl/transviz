@@ -58,69 +58,6 @@ def get_transmats(labelss, N):
             for l in labelss]
 
 
-
-# def cumsum(v,strict=False):
-#     if not strict:
-#         return np.cumsum(v,axis=0)
-#     else:
-#         out = np.zeros_like(v)
-#         out[1:] = np.cumsum(v[:-1],axis=0)
-#         return out
-
-
-# def rle(stateseq):
-#     pos, = np.where(np.diff(stateseq) != 0)
-#     pos = np.concatenate(([0],pos+1,[len(stateseq)]))
-#     return stateseq[pos[:-1]], np.diff(pos)
-
-
-# def slices_from_indicators(indseq):
-#     indseq = np.asarray(indseq)
-#     if not indseq.any():
-#         return []
-#     else:
-#         vals, durs = rle(indseq)
-#         starts, ends = cumsum(durs,strict=True), cumsum(durs,strict=False)
-#         return [slice(start,end) for val,start,end in zip(vals,starts,ends) if val]
-
-
-# def get_labelset(labels):
-#     # NOTE: set difference doesn't work with nans
-#     if isinstance(labels,np.ndarray):
-#         return set(l for l in set(labels) if not np.isnan(l))
-#     else:
-#         return reduce(operator.or_, (get_labelset(l) for l in labels))
-
-
-# def split_on_nans(seq):
-#     return [seq[sl] for sl in slices_from_indicators(~np.isnan(seq))]
-
-
-# def get_transmats(labels,counts=True,ignore_self=True):
-#     if isinstance(labels,np.ndarray):
-#         labels = [labels]
-
-#     labelset = get_labelset(labels)
-#     N = max(labelset)+1
-
-#     mats = [sum(count_transitions(seq,N)
-#             for seq in split_on_nans(l)) for l in labels]
-
-#     if ignore_self:
-#         mats = [m - np.diag(np.diag(m)) for m in mats]
-
-#     if not counts:
-#         def normalize(m):
-#             norms = m.sum(1)
-#             return m / np.where(norms > 0, norms, 1.)
-#         mats = [normalize(m) for m in mats]
-
-#     if len(mats) > 1:
-#         return mats
-#     else:
-#         return mats[0]
-
-
 ##############
 #  matrices  #
 ##############
