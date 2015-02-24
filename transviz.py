@@ -141,34 +141,39 @@ class TransGraph(nx.DiGraph):
     def get_cachename(algname,weights):
         return algname + hashlib.sha1(np.array(weights)).hexdigest()[:6]
 
-    def layout(self,algname,**kwargs):
-        cachename = self.get_cachename(
-            algname, [self.edge[i][j]['weight'] for (i,j) in self.edges()])
+    def layout(self,algname=None,posdict=None,**kwargs):
+        assert (algname is not None) ^ (posdict is not None), \
+            'must pass algname or posdict'
 
-        if os.path.isfile(cachename):
-            with open(cachename,'r') as infile:
-                posdict = pickle.load(infile)
-        else:
-            if algname in graphviz_layouts:
-                self.graph['graph'].update(dict(graphviz_layouts[algname],**kwargs))
-                posdict = nx.graphviz_layout(self,algname)
-            elif algname in networkx_layouts:
-                func = nx.__dict__[algname+'_layout']
-                kwargs = dict(networkx_layouts[algname],**kwargs)
-                kwargs['scale'] *= np.sqrt(self.order())
-                posdict = func(self,**kwargs)
+        if posdict is None:
+            cachename = self.get_cachename(
+                algname, [self.edge[i][j]['weight'] for (i,j) in self.edges()])
+
+            if os.path.isfile(cachename):
+                with open(cachename,'r') as infile:
+                    posdict = pickle.load(infile)
             else:
-                raise ValueError(
-                    'algname must be one of %s' %
-                    (graphviz_layouts.keys() + networkx_layouts.keys()))
+                if algname in graphviz_layouts:
+                    self.graph['graph'].update(dict(graphviz_layouts[algname],**kwargs))
+                    posdict = nx.graphviz_layout(self,algname)
+                elif algname in networkx_layouts:
+                    func = nx.__dict__[algname+'_layout']
+                    kwargs = dict(networkx_layouts[algname],**kwargs)
+                    kwargs['scale'] *= np.sqrt(self.order())
+                    posdict = func(self,**kwargs)
+                else:
+                    raise ValueError(
+                        'algname must be one of %s' %
+                        (graphviz_layouts.keys() + networkx_layouts.keys()))
 
-            with open(cachename,'w') as outfile:
-                pickle.dump(posdict,outfile,protocol=-1)
+                with open(cachename,'w') as outfile:
+                    pickle.dump(posdict,outfile,protocol=-1)
 
         nx.set_node_attributes(
             self,'pos',
             {k:('%f,%f!' % tuple(v)) for k,v in posdict.items()})
 
+        self.posdict = posdict
         self.has_layout = True
 
         return self
