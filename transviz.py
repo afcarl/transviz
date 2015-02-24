@@ -9,8 +9,6 @@ import cPickle as pickle
 from util import rgb2hexa, num_args, get_agraph_pngstr, \
         get_usages, normalize_transmat
 
-# TODO take count matrices?
-
 # TODO add highlighting of nodes/neighborhoods
 # TODO add igraph kk layout
 # TODO circo bend through middle?
@@ -75,10 +73,13 @@ converters = defaultdict(
 
 
 def convert(dct):
-    try:
-        return {attr:converters[attr](val) for attr, val in dct.items()}
-    except:
-        return dct
+    ret = {}
+    for attr, val in dct.items():
+        try:
+            ret[attr] = converters[attr](val)
+        except:
+            ret[attr] = val
+    return ret
 
 
 class TransGraph(nx.DiGraph):
@@ -179,7 +180,7 @@ class TransGraph(nx.DiGraph):
         if outfile is None:
             pngstr = get_agraph_pngstr(agraph)
 
-            if matplotlib:
+            if matplotlib and not notebook:
                 import matplotlib.pyplot as plt
                 import matplotlib.image as mpimg
                 plt.imshow(mpimg.imread(pngstr),aspect='equal')
@@ -190,6 +191,17 @@ class TransGraph(nx.DiGraph):
                 display(Image(data=pngstr))
         else:
             agraph.draw(outfile)
+
+    def highlight(self,node,
+            incolor=(0.21568627450980393, 0.47058823529411764, 0.7490196078431373),
+            outcolor=(0.996078431372549, 0.7019607843137254, 0.03137254901960784)):
+        self.node_attrs(
+            lambda i: {'color': (0.,0.,0.,1.0 if i == node else 0.05)})\
+            .edge_attrs(
+            lambda i,j,aij:
+                {'color': (incolor if j == node else outcolor)
+                    + (aij if i == node or j == node else 0.0,)})
+        return self
 
 
 class TransDiff(TransGraph):

@@ -5,6 +5,8 @@ from cStringIO import StringIO
 from matplotlib.colors import rgb2hex
 import matplotlib.pyplot as plt
 
+from pyhsmm.util.general import rle, cumsum
+from pyhsmm.util.cstats import count_transitions as _count_transitions
 
 ##########
 #  misc  #
@@ -34,14 +36,12 @@ def relabel_by_usage(seq):
 
 
 def count_transitions(labels,N=None,ignore_self=True):
-    labelset = np.unique(labels)
-    labelset = labelset[~np.isnan(labelset)]
-    N = int(max(labelset))+1 if not N else N
+    if N is None:
+        labelset = np.unique(labels)
+        labelset = labelset[~np.isnan(labelset)]
+        N = int(max(labelset))+1
 
-    out = np.zeros((N,N))
-    for i,j in zip(labels[:-1],labels[1:]):
-        if i == i and j == j:
-            out[i,j] += 1
+    out = sum(_count_transitions(l.astype('int32'),N) for l in split_on_nans(labels))
 
     if ignore_self:
         out -= np.diag(np.diag(out))
@@ -56,6 +56,21 @@ def get_transmats(labelss, N):
     n = (usages > 0).sum()
     return [permute_matrix(count_transitions(l,N),perm)[:n,:n]
             for l in labelss]
+
+
+def split_on_nans(seq):
+    return [seq[sl] for sl in slices_from_indicators(~np.isnan(seq))]
+
+
+def slices_from_indicators(indseq):
+    indseq = np.asarray(indseq)
+    if not indseq.any():
+        return []
+    else:
+        vals, durs = rle(indseq)
+        starts, ends = cumsum(durs,strict=True), cumsum(durs,strict=False)
+        return [slice(start,end)
+                for val,start,end in zip(vals,starts,ends) if val]
 
 
 ##############
@@ -98,11 +113,21 @@ def permute_by_usage(A,return_perm=False):
         return permute_matrix(A,perm)
 
 
+def top5_per_row(A):
+    return np.array([np.where(row >= sorted(row)[-5],row,0.) for row in A])
+
+
+#############
+#  drawing  #
+#############
+
+
 def get_agraph_pngstr(agraph):
     sio = StringIO()
     agraph.draw(sio,format='png')
-    sio.seek(0)
-    return sio
+    ret = sio.getvalue()
+    sio.close()
+    return ret
 
 
 def rgb2hexa(rgb):
@@ -113,4 +138,5 @@ def show_cmap(cmap):
     plt.imshow(np.tile(np.linspace(0,1,256),(10,1)),cmap=cmap,aspect='equal')
     plt.grid('off')
     plt.yticks([])
+
 
