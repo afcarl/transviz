@@ -6,6 +6,8 @@ from collections import defaultdict
 from util import rgb2hexa, permute_by_usage, permute_matrix, \
     pad_zeros, num_args, get_agraph_pngstr, get_usages
 
+# TODO take count matrices?
+
 # TODO add highlighting of nodes/neighborhoods
 # TODO add igraph kk layout
 # TODO circo bend through middle?
@@ -16,7 +18,6 @@ from util import rgb2hexa, permute_by_usage, permute_matrix, \
 graphdefaults = dict(
     dpi='72',
     outputorder='edgesfirst',
-    start=0,
 )
 
 nodedefaults = dict(
@@ -74,12 +75,11 @@ def convert(dct):
     try:
         return {attr:converters[attr](val) for attr, val in dct.items()}
     except:
-        import ipdb; ipdb.set_trace();
         return dct
 
 
 class TransGraph(nx.DiGraph):
-    def __init__(self,A,relabel='usage',normalize=True,nmax=None):
+    def __init__(self,A,relabel=None,normalize=True,nmax=None):
         # preprocess the trans matrix/matrices
         if relabel == 'usage':
             A, self.perm = permute_by_usage(A,return_perm=True)
@@ -176,13 +176,8 @@ class TransGraph(nx.DiGraph):
 
 
 class TransDiff(TransGraph):
-    def __init__(self,(A,B),relabel='usage',normalize=True,nmax=None):
-        B = pad_zeros(B,A.shape)
-        super(TransDiff,self).__init__(A,relabel=relabel,normalize=normalize,nmax=nmax)
-        self.B = permute_matrix(B,self.perm)[:nmax,:nmax]
-        self.B_usages = get_usages(self.B)
-        if normalize:
-            self.B /= self.B.max()
+    def __init__(self,(A,B),normalize=True,nmax=None):
+        raise NotImplementedError  # TODO
 
     def edge_attrs(self,func):
         nargs = num_args(func)
