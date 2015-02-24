@@ -6,7 +6,7 @@ import hashlib
 import os
 import cPickle as pickle
 
-from util import rgb2hexa, num_args, get_agraph_pngstr, \
+from transvizutil import rgb2hexa, num_args, get_agraph_pngstr, \
         get_usages, normalize_transmat
 
 # TODO add highlighting of nodes/neighborhoods
