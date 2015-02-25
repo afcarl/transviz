@@ -231,7 +231,7 @@ class TransDiff(TransGraph):
             assert norm is None
 
         # initialize as a nx.DiGraph
-        super(TransGraph,self).__init__(A)
+        super(TransGraph,self).__init__(A+B)
 
         # set defaults
         self.graph['graph'] = graphdefaults
