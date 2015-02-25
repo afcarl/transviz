@@ -113,8 +113,8 @@ def permute_by_usage(A,return_perm=False):
         return permute_matrix(A,perm)
 
 
-def top5_per_row(A):
-    return np.array([np.where(row >= sorted(row)[-5],row,0.) for row in A])
+def topk_per_row(A,k):
+    return np.array([np.where(row >= sorted(row)[-k],row,0.) for row in A])
 
 
 #############

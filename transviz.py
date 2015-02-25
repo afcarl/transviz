@@ -9,16 +9,16 @@ import cPickle as pickle
 from transvizutil import rgb2hexa, num_args, get_agraph_pngstr, \
         get_usages, normalize_transmat
 
-# TODO add highlighting of nodes/neighborhoods
 # TODO add igraph kk layout
 # TODO circo bend through middle?
+# TODO node shrinking by adding node copies behind the originals!
 
 # default graphviz attributes
-
 
 graphdefaults = dict(
     dpi='72',
     outputorder='edgesfirst',
+    # splines='true',  # segfault? https://github.com/ellson/graphviz/issues/42
 )
 
 nodedefaults = dict(
@@ -169,10 +169,7 @@ class TransGraph(nx.DiGraph):
                 with open(cachename,'w') as outfile:
                     pickle.dump(posdict,outfile,protocol=-1)
 
-        nx.set_node_attributes(
-            self,'pos',
-            {k:('%f,%f!' % tuple(v)) for k,v in posdict.items()})
-
+        self.node_attrs(lambda i: {'pos':posdict[i]})
         self.posdict = posdict
         self.has_layout = True
 
@@ -196,6 +193,31 @@ class TransGraph(nx.DiGraph):
                 display(Image(data=pngstr))
         else:
             agraph.draw(outfile)
+
+    def prune_edges(self,func):
+        nargs = num_args(func)
+
+        if nargs == 1:
+            to_remove = \
+                [(i,j) for i, j, edge in self.edges_iter(data=True)
+                 if func((i,j))]
+        elif nargs == 2:
+            to_remove = \
+                [(i,j) for i, j, edge in self.edges_iter(data=True)
+                 if func(i,j)]
+        elif nargs == 3:
+            to_remove = \
+                [(i,j) for i, j, edge in self.edges_iter(data=True)
+                 if func(i,j,self.A[i,j])]
+        else:
+            raise ValueError('func must take 1, 2, or 3 arguments')
+
+        for e in to_remove:
+            self.remove_edge(*e)
+
+        return self
+
+    ### convenience
 
     def highlight(self,node,
             incolor=(0.21568627450980393, 0.47058823529411764, 0.7490196078431373),
@@ -266,6 +288,29 @@ class TransDiff(TransGraph):
                 node.update(convert(func(i,self.A_usages[i],self.B_usages[i])))
         else:
             raise ValueError('func must take 1 or 3 arguments')
+
+        return self
+
+    def prune_edges(self,func):
+        nargs = num_args(func)
+
+        if nargs == 1:
+            to_remove = \
+                [(i,j) for i, j, edge in self.edges_iter(data=True)
+                 if func((i,j))]
+        elif nargs == 2:
+            to_remove = \
+                [(i,j) for i, j, edge in self.edges_iter(data=True)
+                 if func(i,j)]
+        elif nargs == 4:
+            to_remove = \
+                [(i,j) for i, j, edge in self.edges_iter(data=True)
+                 if func(i,j,self.A[i,j],self.B[i,j])]
+        else:
+            raise ValueError('func must take 1, 2, or 4 arguments')
+
+        for e in to_remove:
+            self.remove_edge(*e)
 
         return self
 
