@@ -1,6 +1,7 @@
 from __future__ import division
 import numpy as np
 import inspect
+import operator
 from matplotlib.colors import rgb2hex
 import matplotlib.pyplot as plt
 
@@ -21,7 +22,19 @@ def num_args(func):
 ###############
 
 
-def relabel_by_usage(seq):
+def get_labelset(labelss):
+    if isinstance(labelss,np.ndarray):
+        labelset = np.unique(labelss)
+        return set(labelset[~np.isnan(labelset)])
+    else:
+        return reduce(operator.or_,(get_labelset(l) for l in labelss))
+
+
+def get_N(labelss):
+    return int(max(get_labelset(labelss)))+1
+
+
+def relabel_by_usage_old(seq):
     good = ~np.isnan(seq)
     usages = np.bincount(seq[good].astype('int32'))
     perm = np.argsort(np.argsort(usages)[::-1])
@@ -34,12 +47,26 @@ def relabel_by_usage(seq):
     return out
 
 
-def count_transitions(labels,N=None,ignore_self=True):
-    if N is None:
-        labelset = np.unique(labels)
-        labelset = labelset[~np.isnan(labelset)]
-        N = int(max(labelset))+1
+def relabel_by_usage(labelss, N=None):
+    N = get_N(labelss) if not N else N
+    usages = sum(np.bincount(l[~np.isnan(l)].astype('int32'),minlength=N)
+                 for l in labelss)
+    perm = np.argsort(np.argsort(usages)[::-1])
 
+    outs = []
+    for l in labelss:
+        out = np.empty_like(l)
+        good = ~np.isnan(l)
+        out[good] = perm[l[good].astype('int32')]
+        if np.isnan(l).any():
+            out[~good] = np.nan
+        outs.append(out)
+
+    return outs
+
+
+def count_transitions(labels,N=None,ignore_self=True):
+    N = get_N(labels) if not N else N
     out = sum(_count_transitions(l.astype('int32'),N) for l in split_on_nans(labels))
 
     if ignore_self:
