@@ -27,6 +27,7 @@ nodedefaults = dict(
     fillcolor='white',
     style='filled',
     fixedsize='true',
+    penwidth=1.3,
 )
 
 edgedefaults = dict()
@@ -62,13 +63,18 @@ networkx_layouts = {
 
 
 # converters from my attribute formats to graphviz formats
+def color_converter(rgba):
+    if not isinstance(rgba[0],(list,tuple)):
+        return rgb2hexa(rgba)
+    else:
+        return ':'.join(rgb2hexa(_) for _ in rgba)
 
 converters = defaultdict(
     lambda: str,
     {
         'pos': lambda xy: '%f,%f!' % xy,
-        'color': lambda rgba: rgb2hexa(rgba),
-        'fillcolor': lambda rgba: rgb2hexa(rgba),
+        'color': color_converter,
+        'fillcolor': color_converter,
         'weight': lambda x: x,
     }
 )
