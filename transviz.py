@@ -5,9 +5,9 @@ from collections import defaultdict
 import hashlib
 import os
 import cPickle as pickle
+from cStringIO import StringIO
 
-from transvizutil import rgb2hexa, num_args, get_agraph_pngstr, \
-        get_usages, normalize_transmat
+from transvizutil import rgb2hexa, num_args, get_usages, normalize_transmat
 
 # TODO add igraph kk layout
 # TODO circo bend through middle?
@@ -18,6 +18,7 @@ from transvizutil import rgb2hexa, num_args, get_agraph_pngstr, \
 graphdefaults = dict(
     dpi='72',
     outputorder='edgesfirst',
+    # bgcolor='transparent',
     # splines='true',  # segfault? https://github.com/ellson/graphviz/issues/42
 )
 
@@ -67,6 +68,7 @@ converters = defaultdict(
     {
         'pos': lambda xy: '%f,%f!' % xy,
         'color': lambda rgba: rgb2hexa(rgba),
+        'fillcolor': lambda rgba: rgb2hexa(rgba),
         'weight': lambda x: x,
     }
 )
@@ -106,7 +108,7 @@ class TransGraph(nx.DiGraph):
         self.graph['graph'].update(convert(kwargs))
         return self
 
-    def node_attrs(self,func):
+    def node_attrs(self,func,selector=lambda dct: True):
         nargs = num_args(func)
 
         if nargs == 1:
@@ -120,7 +122,7 @@ class TransGraph(nx.DiGraph):
 
         return self
 
-    def edge_attrs(self,func):
+    def edge_attrs(self,func,selector=lambda dct: True):
         nargs = num_args(func)
 
         if nargs == 1:
@@ -180,7 +182,7 @@ class TransGraph(nx.DiGraph):
         agraph.has_layout = self.has_layout
 
         if outfile is None:
-            pngstr = get_agraph_pngstr(agraph)
+            pngstr = self._get_agraph_pngstr(agraph)
 
             if matplotlib and not notebook:
                 import matplotlib.pyplot as plt
@@ -193,6 +195,14 @@ class TransGraph(nx.DiGraph):
                 display(Image(data=pngstr))
         else:
             agraph.draw(outfile)
+
+    @staticmethod
+    def _get_agraph_pngstr(agraph):
+        sio = StringIO()
+        agraph.draw(sio,format='png')
+        ret = sio.getvalue()
+        sio.close()
+        return ret
 
     def prune_edges(self,func):
         nargs = num_args(func)
@@ -252,6 +262,8 @@ class TransDiff(TransGraph):
         else:
             assert norm is None
 
+        self.has_foreground_nodes = False
+
         # initialize as a nx.DiGraph
         super(TransGraph,self).__init__(A+B)
 
@@ -277,21 +289,23 @@ class TransDiff(TransGraph):
 
         return self
 
-    def node_attrs(self,func):
+    def node_attrs(self,func,selector=lambda dct: 'backgroundnode' not in dct):
         nargs = num_args(func)
 
         if nargs == 1:
             for i, node in self.nodes_iter(data=True):
-                node.update(convert(func(i)))
+                if selector(node):
+                    node.update(convert(func(i)))
         elif nargs == 3:
             for i, node in self.nodes_iter(data=True):
-                node.update(convert(func(i,self.A_usages[i],self.B_usages[i])))
+                if selector(node):
+                    node.update(convert(func(i,self.A_usages[i],self.B_usages[i])))
         else:
             raise ValueError('func must take 1 or 3 arguments')
 
         return self
 
-    def prune_edges(self,func):
+    def prune_edges(self,func,selector=lambda dct: True):
         nargs = num_args(func)
 
         if nargs == 1:
@@ -313,4 +327,40 @@ class TransDiff(TransGraph):
             self.remove_edge(*e)
 
         return self
+
+    def foreground_node_attrs(self,func,selector=lambda x: True):
+        if not self.has_foreground_nodes:
+            for i, node in self.nodes_iter(data=True):
+                self.add_node("%d'" % i, dict(foregroundnode=True,label=i,**node))
+            self.has_foreground_nodes = True
+
+        nargs = num_args(func)
+
+        if nargs == 1:
+            for i, node in self.nodes_iter(data=True):
+                if 'foregroundnode' in node and selector(node):
+                    i = int(i[:-1])
+                    node.update(convert(func(i)))
+        elif nargs == 3:
+            for i, node in self.nodes_iter(data=True):
+                if 'foregroundnode' in node and selector(node):
+                    i = int(i[:-1])
+                    node.update(convert(func(i,self.A_usages[i],self.B_usages[i])))
+        else:
+            raise ValueError('func must take 1 or 3 arguments')
+
+        return self
+
+    # TODO change the ordering in the dot file?
+
+    # def layout(self,algname=None,posdict=None,**kwargs):
+    #     super(TransDiff,self).layout(algname=algname,posdict=posdict,**kwargs)
+    #     if self.has_background_nodes:
+    #         # TODO
+    #         raise NotImplementedError('call layout before adding bgnd nodes')
+
+    # def draw(self,outfile=None,matplotlib=True,notebook=False):
+    #     # TODO put background nodes at the start of the file so they are drawn
+    #     # first
+    #     raise NotImplementedError
 

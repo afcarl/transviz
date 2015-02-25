@@ -1,7 +1,6 @@
 from __future__ import division
 import numpy as np
 import inspect
-from cStringIO import StringIO
 from matplotlib.colors import rgb2hex
 import matplotlib.pyplot as plt
 
@@ -120,14 +119,6 @@ def topk_per_row(A,k):
 #############
 #  drawing  #
 #############
-
-
-def get_agraph_pngstr(agraph):
-    sio = StringIO()
-    agraph.draw(sio,format='png')
-    ret = sio.getvalue()
-    sio.close()
-    return ret
 
 
 def rgb2hexa(rgb):
