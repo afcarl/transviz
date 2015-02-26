@@ -34,7 +34,7 @@ def get_N(labelss):
     return int(max(get_labelset(labelss)))+1
 
 
-def relabel_by_usage(labelss, N=None):
+def relabel_by_usage(labelss, return_mapping=False, N=None):
     if isinstance(labelss,np.ndarray):
         backwards_compat = True
         labelss = [labelss]
@@ -55,7 +55,16 @@ def relabel_by_usage(labelss, N=None):
             out[~good] = np.nan
         outs.append(out)
 
-    return outs if not backwards_compat else outs[0]
+    if backwards_compat:
+        if return_mapping:
+            return outs[0], perm
+        else:
+            return outs[0]
+    else:
+        if return_mapping:
+            return outs, perm
+        else:
+            return outs
 
 
 def count_transitions(labels,N=None,ignore_self=True):
