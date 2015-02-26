@@ -38,6 +38,8 @@ def relabel_by_usage(labelss, N=None):
     if isinstance(labelss,np.ndarray):
         backwards_compat = True
         labelss = [labelss]
+    else:
+        backwards_compat = False
 
     N = get_N(labelss) if not N else N
     usages = sum(np.bincount(l[~np.isnan(l)].astype('int32'),minlength=N)
