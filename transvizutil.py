@@ -34,20 +34,11 @@ def get_N(labelss):
     return int(max(get_labelset(labelss)))+1
 
 
-def relabel_by_usage_old(seq):
-    good = ~np.isnan(seq)
-    usages = np.bincount(seq[good].astype('int32'))
-    perm = np.argsort(np.argsort(usages)[::-1])
-
-    out = np.empty_like(seq)
-    out[good] = perm[seq[good].astype('int32')]
-    if np.isnan(seq).any():
-        out[~good] = np.nan
-
-    return out
-
-
 def relabel_by_usage(labelss, N=None):
+    if isinstance(labelss,np.ndarray):
+        backwards_compat = True
+        labelss = [labelss]
+
     N = get_N(labelss) if not N else N
     usages = sum(np.bincount(l[~np.isnan(l)].astype('int32'),minlength=N)
                  for l in labelss)
@@ -62,7 +53,7 @@ def relabel_by_usage(labelss, N=None):
             out[~good] = np.nan
         outs.append(out)
 
-    return outs
+    return outs if not backwards_compat else outs[0]
 
 
 def count_transitions(labels,N=None,ignore_self=True):

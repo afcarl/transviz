@@ -114,7 +114,7 @@ class TransGraph(nx.DiGraph):
         self.graph['graph'].update(convert(kwargs))
         return self
 
-    def node_attrs(self,func,selector=lambda dct: True):
+    def node_attrs(self,func):
         nargs = num_args(func)
 
         if nargs == 1:
@@ -128,7 +128,7 @@ class TransGraph(nx.DiGraph):
 
         return self
 
-    def edge_attrs(self,func,selector=lambda dct: True):
+    def edge_attrs(self,func):
         nargs = num_args(func)
 
         if nargs == 1:
@@ -295,23 +295,21 @@ class TransDiff(TransGraph):
 
         return self
 
-    def node_attrs(self,func,selector=lambda dct: 'backgroundnode' not in dct):
+    def node_attrs(self,func):
         nargs = num_args(func)
 
         if nargs == 1:
             for i, node in self.nodes_iter(data=True):
-                if selector(node):
-                    node.update(convert(func(i)))
+                node.update(convert(func(i)))
         elif nargs == 3:
             for i, node in self.nodes_iter(data=True):
-                if selector(node):
-                    node.update(convert(func(i,self.A_usages[i],self.B_usages[i])))
+                node.update(convert(func(i,self.A_usages[i],self.B_usages[i])))
         else:
             raise ValueError('func must take 1 or 3 arguments')
 
         return self
 
-    def prune_edges(self,func,selector=lambda dct: True):
+    def prune_edges(self,func):
         nargs = num_args(func)
 
         if nargs == 1:
@@ -334,7 +332,7 @@ class TransDiff(TransGraph):
 
         return self
 
-    def foreground_node_attrs(self,func,selector=lambda x: True):
+    def foreground_node_attrs(self,func):
         if not self.has_foreground_nodes:
             for i, node in self.nodes_iter(data=True):
                 self.add_node("%d'" % i, dict(foregroundnode=True,label=i,**node))
@@ -344,12 +342,12 @@ class TransDiff(TransGraph):
 
         if nargs == 1:
             for i, node in self.nodes_iter(data=True):
-                if 'foregroundnode' in node and selector(node):
+                if 'foregroundnode' in node:
                     i = int(i[:-1])
                     node.update(convert(func(i)))
         elif nargs == 3:
             for i, node in self.nodes_iter(data=True):
-                if 'foregroundnode' in node and selector(node):
+                if 'foregroundnode' in node:
                     i = int(i[:-1])
                     node.update(convert(func(i,self.A_usages[i],self.B_usages[i])))
         else:
