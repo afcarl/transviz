@@ -91,19 +91,22 @@ def convert(dct):
 
 
 class TransGraph(nx.DiGraph):
-    def __init__(self,A,norm=None):
-        self.A = A
-        self.usages = get_usages(A)
+    def __init__(self,A,Nmax=None,edge_threshold=0.):
+        self.A = normalize_transmat(A)
+        self.usages = get_usages(A,normalized=True)
 
-        if norm == 'row':
-            self.A = normalize_transmat(A)
-        elif norm == 'max':
-            self.A = self.A / self.A.max()
+        # initialize as an nx.DiGraph
+        if Nmax is None:
+            super(TransGraph,self).__init__(self.A)
         else:
-            assert norm is None
-
-        # initialize as a nx.DiGraph
-        super(TransGraph,self).__init__(A)
+            super(TransGraph,self).__init__()
+            most_used = np.argsort(self.usages)[::-1][:Nmax]
+            for label in most_used:
+                self.add_node(label)
+            for (i,j), val in np.ndenumerate(self.A):
+                if i in most_used and j in most_used:
+                    if val > edge_threshold:
+                        self.add_edge(i,j,weight=val)
 
         # set defaults
         self.graph['graph'] = graphdefaults
@@ -248,30 +251,27 @@ class TransGraph(nx.DiGraph):
 
 
 class TransDiff(TransGraph):
-    def __init__(self,(A,B),norm=None):
-        self.A = A
-        self.B = B
+    def __init__(self,(A,B),Nmax=None,edge_threshold=0.):
+        self.A = normalize_transmat(A)
+        self.B = normalize_transmat(B)
 
-        self.A_usages = get_usages(A)
-        self.B_usages = get_usages(B)
-
-        if norm == 'row':
-            self.A = normalize_transmat(A)
-            self.B = normalize_transmat(B)
-        elif norm == 'max':
-            self.A = self.A / self.A.max()
-            self.B = self.B / self.B.max()
-        elif norm == 'difference':
-            val = np.abs(self.B - self.A).max()
-            self.A = self.A / val
-            self.B = self.B / val
-        else:
-            assert norm is None
+        self.A_usages = get_usages(A,normalized=True)
+        self.B_usages = get_usages(B,normalized=True)
 
         self.has_foreground_nodes = False
 
-        # initialize as a nx.DiGraph
-        super(TransGraph,self).__init__(A+B)
+        # initialize as an nx.DiGraph
+        if Nmax is None:
+            nx.DiGraph.__init__(self,self.A+self.B)
+        else:
+            nx.DiGraph.__init__(self)
+            most_used = np.argsort(self.A_usages + self.B_usages)[::-1][:Nmax]
+            for label in most_used:
+                self.add_node(label)
+            for (i,j), val in np.ndenumerate(self.A+self.B):
+                if i in most_used and j in most_used:
+                    if val > edge_threshold:
+                        self.add_edge(i,j,weight=val)
 
         # set defaults
         self.graph['graph'] = graphdefaults

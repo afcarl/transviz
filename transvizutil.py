@@ -77,13 +77,9 @@ def count_transitions(labels,N=None,ignore_self=True):
     return out
 
 
-def get_transmats(labelss, N):
-    usages = sum(np.bincount(l[~np.isnan(l)].astype('int32'),minlength=N)
-                 for l in labelss)
-    perm = np.argsort(usages)[::-1]
-    n = (usages > 0).sum()
-    return [permute_matrix(count_transitions(l,N),perm)[:n,:n]
-            for l in labelss]
+def get_transmats(labelss, N=None):
+    N = get_N(labelss) if not N else N
+    return [count_transitions(l,N) for l in labelss]
 
 
 def split_on_nans(seq):
@@ -124,9 +120,9 @@ def permute_matrix(A,perm=None):
     return A[np.ix_(perm,perm)]
 
 
-def get_usages(A):
+def get_usages(A,normalized=True):
     out = np.maximum(A.sum(0),A.sum(1))
-    return out / out.sum()
+    return out / out.sum() if normalized else out
 
 
 def get_usage_order(A):
