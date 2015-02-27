@@ -300,10 +300,12 @@ class TransDiff(TransGraph):
 
         if nargs == 1:
             for i, node in self.nodes_iter(data=True):
-                node.update(convert(func(i)))
+                if 'foregroundnode' not in node:
+                    node.update(convert(func(i)))
         elif nargs == 3:
             for i, node in self.nodes_iter(data=True):
-                node.update(convert(func(i,self.A_usages[i],self.B_usages[i])))
+                if 'foregroundnode' not in node:
+                    node.update(convert(func(i,self.A_usages[i],self.B_usages[i])))
         else:
             raise ValueError('func must take 1 or 3 arguments')
 

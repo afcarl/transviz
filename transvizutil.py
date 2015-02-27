@@ -44,13 +44,13 @@ def relabel_by_usage(labelss, return_mapping=False, N=None):
     N = get_N(labelss) if not N else N
     usages = sum(np.bincount(l[~np.isnan(l)].astype('int32'),minlength=N)
                  for l in labelss)
-    perm = np.argsort(np.argsort(usages)[::-1])
+    ranks = np.argsort(np.argsort(usages)[::-1])
 
     outs = []
     for l in labelss:
         out = np.empty_like(l)
         good = ~np.isnan(l)
-        out[good] = perm[l[good].astype('int32')]
+        out[good] = ranks[l[good].astype('int32')]
         if np.isnan(l).any():
             out[~good] = np.nan
         outs.append(out)
